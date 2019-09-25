@@ -1,16 +1,16 @@
 name: agent
-downdir: ../download
+downdir: /opt/download
 net:
-    ip: 127.0.0.1
+    ip: 0.0.0.0
     mgntPort: 45010
     dataPort: 45011
     tls:
-        cert: ../misc/server.crt
-        key: ../misc/server.key
+        cert: ./misc/server.crt
+        key: ./misc/server.key
 auth:
-    username: gofd
-    password: LFFex2mDcetFDnghcZqpz0z/zbzYhRLBj58fnAs45uc=
-    factor: 802cbde8
+    username: vrviu@sz
+    password: 2NxWjhYydQGbjtxjPxwT++hGkKz98txmt2I5q4R4DwY=
+    factor: 63e9d1ee
 control:
-    cacheSize: 50 # unit is MB
+    cacheSize: 500 # unit is MB
     maxActive: 10

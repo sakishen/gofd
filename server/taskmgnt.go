@@ -12,6 +12,11 @@ import (
 	"github.com/xtfly/gokits/gcache"
 )
 
+const (
+	// FixedBlockLen 每个Piece分成多个Block，每次下载块的大小
+	FixedBlockLen = 1024 * 1024 * 256
+)
+
 type clientRsp struct {
 	IP      string
 	Success bool
@@ -82,10 +87,12 @@ func newTaskInfo(t *CreateTask) *TaskInfo {
 
 func createLinkChain(cfg *common.Config, ips []string, ti *TaskInfo) *p2p.LinkChain {
 	lc := new(p2p.LinkChain)
-	lc.ServerAddr = fmt.Sprintf("%s:%v", cfg.Net.IP, cfg.Net.MgntPort)
+	lc.ServerAddr = fmt.Sprintf("%s:%v", cfg.Net.Host, cfg.Net.MgntPort)
+	//lc.ServerAddr = fmt.Sprintf("%s:%v", "10.86.1.21", cfg.Net.MgntPort)
 	lc.DispatchAddrs = make([]string, 1+len(ips))
 	// 第一个节点为服务端
-	lc.DispatchAddrs[0] = fmt.Sprintf("%s:%v", cfg.Net.IP, cfg.Net.DataPort)
+	lc.DispatchAddrs[0] = fmt.Sprintf("%s:%v", cfg.Net.Host, cfg.Net.DataPort)
+	//lc.DispatchAddrs[0] = fmt.Sprintf("%s:%v", "10.86.1.21", cfg.Net.DataPort)
 
 	idx := 1
 	for _, ip := range ips {
@@ -99,7 +106,7 @@ func createLinkChain(cfg *common.Config, ips []string, ti *TaskInfo) *p2p.LinkCh
 	return lc
 }
 
-// Start 使用一个Goroutine来启动任务操作
+// Start 使用一个 Goroutine 来启动任务操作
 func (ct *CachedTaskInfo) Start() {
 	if ts := ct.createTask(); ts != TaskInProgress {
 		ct.endTask(ts)
@@ -151,7 +158,7 @@ func (ct *CachedTaskInfo) endTask(ts TaskStatus) {
 func (ct *CachedTaskInfo) createTask() TaskStatus {
 	// 先产生任务元数据信息
 	start := time.Now()
-	mi, err := p2p.CreateFileMeta(ct.dispatchFiles, 1024*1024)
+	mi, err := p2p.CreateFileMeta(ct.dispatchFiles, FixedBlockLen) // 块大小
 	end := time.Now()
 	if err != nil {
 		log.Errorf("[%s] Create file meta failed, error=%v", ct.id, err)
@@ -162,7 +169,7 @@ func (ct *CachedTaskInfo) createTask() TaskStatus {
 	dt := &p2p.DispatchTask{
 		TaskID:   ct.id,
 		MetaInfo: mi,
-		Speed:    int64(ct.s.Cfg.Control.Speed * 1024 * 1024),
+		Speed:    int64(ct.s.Cfg.Control.Speed * FixedBlockLen),
 	}
 	dt.LinkChain = createLinkChain(ct.s.Cfg, []string{}, ct.ti) //
 

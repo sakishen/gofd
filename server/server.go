@@ -15,7 +15,7 @@ type Server struct {
 	*common.BaseService
 	// 用于缓存当前接收到任务
 	cache *gcache.Cache
-	// Session管理
+	// Session 管理
 	sessionMgnt *p2p.TaskSessionMgnt
 }
 
@@ -38,6 +38,8 @@ func (s *Server) OnStart(c *common.Config, e *echo.Echo) error {
 	e.DELETE("/api/v1/server/tasks/:id", s.CancelTask)
 	e.GET("/api/v1/server/tasks/:id", s.QueryTask)
 	e.POST("/api/v1/server/tasks/status", s.ReportTask)
+
+	//e.POST("/api/v1/server/jobs")
 
 	return nil
 }

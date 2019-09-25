@@ -195,7 +195,10 @@ func (s *TaskSession) startImp(st *StartTask) {
 
 	// 找到分发路径中位置
 	net := s.g.cfg.Net
-	self := fmt.Sprintf("%s:%v", net.IP, net.DataPort)
+	//common.LOG.Infof("IP:Port:%s:%v", net.IP, net.DataPort)
+	//self := fmt.Sprintf("%s:%v", net.IP, net.DataPort)
+	common.LOG.Infof("IP:Port:%s:%v", net.Host, net.DataPort)
+	self := fmt.Sprintf("%s:%v", net.Host, net.DataPort)
 	addrs := s.task.LinkChain.DispatchAddrs
 	count := len(addrs)
 	for idx := count - 1; idx > 0; idx-- {
@@ -215,6 +218,7 @@ func (s *TaskSession) startImp(st *StartTask) {
 // 寻找可用的地址并连接
 func (s *TaskSession) tryNewPeer() {
 	addrs := s.task.LinkChain.DispatchAddrs
+	common.LOG.Infof("peer addrs: %v", addrs)
 	if s.connFailCount >= maxRetryConnectTimes {
 		s.indexInChain--
 	}
@@ -363,6 +367,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 			return errors.New("Unexpected length")
 		}
 		n := bytesToUint32(message[1:])
+		common.LOG.Tracef("[%s] Recv n:[%d], have.n:[%d]", p.taskID, n, uint32(p.have.n))
 		if n >= uint32(p.have.n) {
 			return errors.New("have index is out of range")
 		}
@@ -394,6 +399,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 		if err != nil {
 			return err
 		}
+		common.LOG.Tracef("[%s] Recv PIECE from peer[%s], index:%d, begin:%d, length:%d", p.taskID, p.address, index, begin, length)
 
 		if s.pieceSet.IsSet(int(index)) {
 			common.LOG.Debugf("[%s] Recv PIECE from peer[%s] is already", p.taskID, p.address)
@@ -411,7 +417,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 		s.recordBlock(p, index, begin, uint32(length))
 		err = s.requestBlock(p) // 继续向此Peer请求发送块信息
 	default:
-		return fmt.Errorf("Uknown message id: %d\n", messageID)
+		return fmt.Errorf("Uknown message id: %d", messageID)
 	}
 
 	return
@@ -438,6 +444,7 @@ func (s *TaskSession) decodeRequest(message []byte, p *peer) (index, begin, leng
 		return
 	}
 	if int64(begin)+int64(length) > s.task.MetaInfo.PieceLen {
+		common.LOG.Errorf("[%s] int64(begin)+int64(length)=%d, s.task.MetaInfo.PieceLen=%d", s.taskID, int64(begin)+int64(length), s.task.MetaInfo.PieceLen)
 		err = errors.New("begin + length out of range")
 		return
 	}
@@ -466,9 +473,10 @@ func (s *TaskSession) sendPiece(p *peer, index, begin, length uint32) (err error
 // 接收块消息
 func (s *TaskSession) recordBlock(p *peer, piece, begin, length uint32) (err error) {
 	block := begin / standardBlockLen
-	common.LOG.Debugf("[%s] Received block from peer[%s] %v.%v", s.taskID, p.address, piece, block)
+	common.LOG.Debugf("[%s] Received block from peer[%s] %v.%v, ", s.taskID, p.address, piece, block)
 
 	requestIndex := (uint64(piece) << 32) | uint64(begin)
+	common.LOG.Debugf("[%s] Received block from peer[%s] %v.%v, requestIndex:%d", s.taskID, p.address, piece, block, requestIndex)
 	delete(p.ourRequests, requestIndex)
 	v, ok := s.activePieces[int(piece)]
 	if !ok {
@@ -547,6 +555,7 @@ func (s *TaskSession) decodePiece(message []byte, p *peer) (index, begin, length
 		return
 	}
 	if int64(begin)+int64(length) > s.task.MetaInfo.PieceLen {
+		common.LOG.Errorf("[%s] int64(begin)+int64(length)=%d, s.task.MetaInfo.PieceLen=%d", s.taskID, int64(begin)+int64(length), s.task.MetaInfo.PieceLen)
 		err = errors.New("begin + length out of range")
 		return
 	}

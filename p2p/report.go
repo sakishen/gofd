@@ -51,8 +51,9 @@ func (r *reporter) reportImp(ri *reportInfo) {
 		common.LOG.Infof("[%s] Report session status... completed", r.taskID)
 	}
 	csr := &StatusReport{
-		TaskID:          r.taskID,
-		IP:              r.cfg.Net.IP,
+		TaskID: r.taskID,
+		//IP:              r.cfg.Net.IP,
+		IP:              r.cfg.Net.Host, // 上报进度使用
 		PercentComplete: ri.percentComplete,
 	}
 	bs, err := json.Marshal(csr)

@@ -1,18 +1,19 @@
-name: server
+name: server # 名称
 net:
-    ip: 127.0.0.1
-    mgntPort: 45000
-    dataPort: 45001
-    agentMgntPort: 45010
-    agentDataPort: 45011
-    tls:
-        cert: ../misc/server.crt
-        key: ../misc/server.key
+    ip: 0.0.0.0 # 监听的IP
+    host: 10.86.1.21
+    mgntPort: 45000 # 管理端口，用于接收客户端的创建任务等Rest接口
+    dataPort: 45001 # 服务端数据下载端口
+    agentMgntPort: 45010 # Agent端的管理端口，用于接收Server下载的管理Rest接口
+    agentDataPort: 45011 # Agent端的数据下载端口
+    tls: # 管理端口的TLS配置，如果没有配置，则管理端口是采用HTTP
+        cert: ./misc/server.crt
+        key: ./misc/server.key
 auth:
-    username: gofd
-    password: LFFex2mDcetFDnghcZqpz0z/zbzYhRLBj58fnAs45uc=
-    factor: 802cbde8
+    username: vrviu@sz # 管理端口与数据端口用于认证的用户名
+    password: 2NxWjhYydQGbjtxjPxwT++hGkKz98txmt2I5q4R4DwY= # 管理端口与数据端口用于认证的密码
+    factor: 63e9d1ee # passwd加密密钥因子
 control:
-    speed: 50  # unit is MB
-    cacheSize: 50 # unit is MB
-    maxActive: 10
+    speed: 50000  # 流量控制，单位为MBps
+    cacheSize: 500 # unit is MB
+    maxActive: 12 # 并发的任务数

@@ -3,10 +3,11 @@ package p2p
 import (
 	"crypto/sha1"
 	"fmt"
-	"github.com/labstack/gommon/log"
 	"io"
 	"os"
 	"path"
+
+	"github.com/labstack/gommon/log"
 )
 
 // fileSystemAdapter FileSystem接口适配
@@ -115,9 +116,9 @@ func sha1Sum(file string) (sum string, err error) {
 }
 
 const (
-	minimumPieceLength   = 16 * 1024
-	targetPieceCountLog2 = 10
-	targetPieceCountMin  = 1 << targetPieceCountLog2
+	minimumPieceLength   = 1024 * 1024 * 256 // 256 M
+	targetPieceCountLog2 = 28
+	targetPieceCountMin  = 1 << targetPieceCountLog2 // 128M
 
 	// Target piece count should be < targetPieceCountMax
 	targetPieceCountMax = targetPieceCountMin << 1
@@ -134,5 +135,6 @@ func choosePieceLength(totalLength int64) (pieceLength int64) {
 		pieceLength <<= 1
 		pieces >>= 1
 	}
+
 	return
 }

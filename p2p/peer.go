@@ -94,8 +94,8 @@ func (p *peer) peerWriter(errorChan chan peerMessage) {
 			common.LOG.Tracef("[%s] Sending keep alive to peer[%s]", p.taskID, p.address)
 		}
 		lastWriteTime = now
-
-		//common.LOG.Debugf("[%s] Sending message to peer[%s], length=%v", p.taskID, p.address, uint32(len(msg)))
+		// 发送消息给对端
+		//common.LOG.Debugf("[%s] Sending message to peer[%s], length=%v, msg:%v", p.taskID, p.address, uint32(len(msg)), msg)
 		err := writeNBOUint32(p.flowctrlWriter, uint32(len(msg)))
 		if err != nil {
 			common.LOG.Error(err)

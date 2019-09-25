@@ -28,6 +28,7 @@ type Config struct {
 
 	Net struct {
 		IP       string `yaml:"ip"`
+		Host     string `yaml:"host"`
 		MgntPort int    `yaml:"mgntPort"`
 		DataPort int    `yaml:"dataPort"`
 

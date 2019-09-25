@@ -24,9 +24,9 @@ func NewAgent(cfg *common.Config) (*Agent, error) {
 
 // OnStart implements the Service interface
 func (c *Agent) OnStart(cfg *common.Config, e *echo.Echo) error {
-	go func() { c.sessionMgnt.Start() }()
+	go func() { c.sessionMgnt.Start() }() // 启动任务管理
 
-	e.Use(middleware.BasicAuth(c.Auth))
+	e.Use(middleware.BasicAuth(c.Auth)) // 使用了密码登录
 	e.POST("/api/v1/agent/tasks", c.CreateTask)
 	e.POST("/api/v1/agent/tasks/start", c.StartTask)
 	e.DELETE("/api/v1/agent/tasks/:id", c.CancelTask)

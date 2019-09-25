@@ -52,6 +52,7 @@ func (s *BaseService) initlog() {
 func (s *BaseService) runEcho() (err error) {
 	net := s.Cfg.Net
 	addr := fmt.Sprintf("%s:%v", net.IP, net.MgntPort)
+	//addr := fmt.Sprintf("0.0.0.0:%v", net.MgntPort)
 	LOG.Infof("Starting http server %s", addr)
 	if net.TLS != nil {
 		err = s.echo.StartTLS(addr, net.TLS.Cert, net.TLS.Key)

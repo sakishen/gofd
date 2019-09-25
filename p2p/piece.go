@@ -9,10 +9,10 @@ import (
 
 const (
 	// 每个Piece分成多个Block，每次下载块的大小
-	standardBlockLen = 32 * 1024
+	standardBlockLen = 1024 * 1024 * 256
 
 	// 最大块的长度
-	maxBlockLen = 128 * 1024
+	maxBlockLen = 1024 * 1024 * 512
 )
 
 type chunk struct {
