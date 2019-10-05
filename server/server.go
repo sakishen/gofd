@@ -13,7 +13,7 @@ import (
 // Server ..
 type Server struct {
 	*common.BaseService
-	// 用于缓存当前接收到任务
+	// 用于缓存当前接收到任务(分发与归档任务共用)
 	cache *gcache.Cache
 	// Session 管理
 	sessionMgnt *p2p.TaskSessionMgnt
@@ -31,7 +31,7 @@ func NewServer(cfg *common.Config) (*Server, error) {
 
 // OnStart ...
 func (s *Server) OnStart(c *common.Config, e *echo.Echo) error {
-	go func() { s.sessionMgnt.Start() }()
+	go func() { _ = s.sessionMgnt.Start() }()
 
 	e.Use(middleware.BasicAuth(s.Auth))
 	e.POST("/api/v1/server/tasks", s.CreateTask)
@@ -39,7 +39,12 @@ func (s *Server) OnStart(c *common.Config, e *echo.Echo) error {
 	e.GET("/api/v1/server/tasks/:id", s.QueryTask)
 	e.POST("/api/v1/server/tasks/status", s.ReportTask)
 
-	//e.POST("/api/v1/server/jobs")
+	e.POST("/api/v1/server/archive", s.StartArchive)
+
+	e.POST("/api/v1/server/deploy", s.CreateDeploy)	// 创建任务
+	e.DELETE("/api/v1/server/deploy/:id", s.CancelDeploy) // 取消任务
+	e.GET("/api/v1/server/deploy/:id", s.QueryDeploy) // 获取任务执行信息
+	e.POST("/api/v1/server/deploy/status", s.ReportDeployTask) // 接收任务进度上报
 
 	return nil
 }

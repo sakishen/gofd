@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/xtfly/gofd/agent"
 	"github.com/xtfly/gofd/common"
@@ -23,6 +24,11 @@ func usage() {
 	fmt.Println("gofd [<-a|-s> <configfile>] [-p <passwd>]")
 	flag.PrintDefaults()
 	os.Exit(2)
+}
+
+func init() {
+	l, _ := time.LoadLocation("Asia/Shanghai")
+	fmt.Printf("Initialization finished location:%v. O(∩_∩)O\n", l)
 }
 
 func main() {

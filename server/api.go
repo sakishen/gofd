@@ -10,8 +10,42 @@ type CreateTask struct {
 	DestIPs       []string `json:"destIPs"`
 }
 
+// StartArchive 创建归档任务
+type StartArchive struct {
+	ID             string `json:"id"`
+	ArchiveDirPath string `json:"archiveDirPath"`
+	DestFilePath   string `json:"destFilePath"`
+}
+
+// CreateDeployTask 创建部署任务
+type CreateDeployTask struct {
+	ID            string   `json:"id"`
+	DispatchFiles []string `json:"dispatchFiles"`
+	DestIPs       []string `json:"destIPs"`
+}
+
 // TaskInfo 查询分发任务
 type TaskInfo struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+
+	StartedAt  time.Time `json:"startedAt"`
+	FinishedAt time.Time `json:"finishedAt"`
+
+	DispatchInfos map[string]*DispatchInfo `json:"dispatchInfos,omitempty"`
+}
+
+// ArchiveInfo 查询归档任务
+type ArchiveInfo struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+
+	StartedAt  time.Time `json:"startedAt"`
+	FinishedAt time.Time `json:"finishedAt"`
+}
+
+// DeployTaskInfo 查询分发任务
+type DeployTaskInfo struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
 
