@@ -77,7 +77,7 @@ func (ct *CachedArchiveInfo) endArchive(ts TaskStatus) {
 	ct.ti.Status = ts.String()
 	ct.ti.FinishedAt = time.Now()
 	log.Infof("[%s] Archive elapsed time: (%.2f seconds)", ct.id, ct.ti.FinishedAt.Sub(ct.ti.StartedAt).Seconds())
-	ct.s.cache.Replace(ct.id, ct, 5*time.Minute)
+	_ = ct.s.cache.Replace(ct.id, ct, 5*time.Minute)
 	//ct.s.sessionMgnt.StopTask(ct.id)
 }
 
@@ -103,7 +103,7 @@ func (ct *CachedArchiveInfo) Start() {
 			// 内容相同, 如果失败了, 则重新启动
 			c.out <- true
 			if ct.ti.Status == TaskFailed.String() {
-				ct.s.cache.Replace(ct.id, ct, gcache.NoExpiration)
+				_ = ct.s.cache.Replace(ct.id, ct, gcache.NoExpiration)
 				log.Infof("[%s] Archive status is FAILED, will start task try again", ct.id)
 				if ts := ct.createTask(); ts != TaskInProgress {
 					ct.endArchive(ts)
@@ -184,4 +184,12 @@ func (ct *CachedArchiveInfo) createTask() TaskStatus {
 			}
 		}
 	}*/
+}
+
+// Query ...
+func (ct *CachedArchiveInfo) Query() *ArchiveInfo {
+	qchan := make(chan *ArchiveInfo, 2)
+	ct.queryChan <- &queryArchive{out: qchan}
+	defer close(qchan)
+	return <-qchan
 }

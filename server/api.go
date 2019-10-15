@@ -6,6 +6,8 @@ import "time"
 // CreateTask 创建分发任务
 type CreateTask struct {
 	ID            string   `json:"id"`
+	Gid           int      `json:"gid"`
+	Version       int      `json:"version"`
 	DispatchFiles []string `json:"dispatchFiles"`
 	DestIPs       []string `json:"destIPs"`
 }
@@ -13,15 +15,17 @@ type CreateTask struct {
 // StartArchive 创建归档任务
 type StartArchive struct {
 	ID             string `json:"id"`
+	Gid            int    `json:"gid"`
+	Version        int    `json:"version"`
 	ArchiveDirPath string `json:"archiveDirPath"`
 	DestFilePath   string `json:"destFilePath"`
 }
 
 // CreateDeployTask 创建部署任务
 type CreateDeployTask struct {
-	ID            string   `json:"id"`
-	DispatchFiles []string `json:"dispatchFiles"`
-	DestIPs       []string `json:"destIPs"`
+	ID            string   `json:"id"`            // 任务 ID
+	DispatchFiles []string `json:"dispatchFiles"` // 部署任务相关列表
+	DestIPs       []string `json:"destIPs"`       // 参与部署任务的机器 IP
 }
 
 // TaskInfo 查询分发任务

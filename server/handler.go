@@ -31,7 +31,7 @@ func (s *Server) CreateTask(c echo.Context) (err error) {
 		return c.String(http.StatusBadRequest, TaskExist.String())
 	}
 
-	common.LOG.Infof("[%s] Recv task, file=%v, ips=%v", t.ID, t.DispatchFiles, t.DestIPs)
+	common.LOG.Infof("[%s] Recv task, file=%v, ips=%v, gid=%v, version=%v", t.ID, t.DispatchFiles, t.DestIPs, t.Gid, t.Version)
 
 	cti := NewCachedTaskInfo(s, t)
 	s.cache.Set(t.ID, cti, gcache.NoExpiration)
@@ -80,7 +80,7 @@ func (s *Server) ReportTask(c echo.Context) (err error) {
 		return
 	}
 
-	common.LOG.Debugf("[%s] Recv task report, ip=%v, percent=%v", csr.TaskID, csr.IP, csr.PercentComplete)
+	common.LOG.Debugf("[%s] Recv task report, ip=%v, gid=%v, version=%v, percent=%v", csr.TaskID, csr.IP, csr.GID, csr.Version, csr.PercentComplete)
 	if v, ok := s.cache.Get(csr.TaskID); ok {
 		cti := v.(*CachedTaskInfo)
 		cti.reportChan <- csr
@@ -106,16 +106,16 @@ func (s *Server) StartArchive(c echo.Context) (err error) {
 		if cai.EqualCmp(a) {
 			return c.String(http.StatusAccepted, "")
 		}
-		common.LOG.Debugf("[%s] Recv achive, achive is existed", a.ID)
+		common.LOG.Debugf("[%s] Recv archive, archive is existed", a.ID)
 		return c.String(http.StatusBadRequest, TaskExist.String())
 	}
 
-	common.LOG.Infof("[%s] Recv achive, dirpath=%v", a.ID, a.ArchiveDirPath)
+	common.LOG.Infof("[%s] Recv archive, dir_path=%v", a.ID, a.ArchiveDirPath)
 
 	cai := NewCachedArchiveInfo(s, a)
 	s.cache.Set(a.ID, cai, gcache.NoExpiration)
 	s.cache.OnEvicted(func(id string, v interface{}) {
-		common.LOG.Infof("[%s] Remove achive cache", a.ID)
+		common.LOG.Infof("[%s] Remove archive cache", a.ID)
 		cai := v.(*CachedArchiveInfo)
 		cai.quitChan <- struct{}{}
 	})
@@ -124,76 +124,14 @@ func (s *Server) StartArchive(c echo.Context) (err error) {
 	return c.String(http.StatusOK, "")
 }
 
-func (s *Server) CreateDeploy(c echo.Context) (err error) {
-	//  获取Body
-	d := new(CreateDeployTask)
-	if err = c.Bind(d); err != nil {
-		common.LOG.Errorf("Recv [%s] request, decode body failed. %v", c.Request().URL, err)
-		return
-	}
-
-	// 检查任务是否存在
-	v, ok := s.cache.Get(d.ID)
-	if ok {
-		cdi := v.(*CachedDeployTaskInfo)
-		if cdi.EqualDeployCmp(d) {
-			return c.String(http.StatusAccepted, "")
-		}
-		common.LOG.Debugf("[%s] Recv deploy request, deploy is existed", d.ID)
-		return c.String(http.StatusBadRequest, TaskExist.String())
-	}
-
-	cdi := NewCachedDeployTaskInfo(s, d)
-	s.cache.Set(d.ID, cdi, gcache.NoExpiration)
-	s.cache.OnEvicted(func(id string, v interface{}) {
-		common.LOG.Infof("[%s] Remove deploy cache", d.ID)
-		cai := v.(*CachedArchiveInfo)
-		cai.quitChan <- struct{}{}
-	})
-	go cdi.Start()
-
-	return c.String(http.StatusOK, "")
-}
-
-// CancelTask DELETE /api/v1/server/deploy/:id
-func (s *Server) CancelDeploy(c echo.Context) error {
+func (s *Server) QueryArchiveTask(c echo.Context) error {
 	id := c.Param("id")
-	common.LOG.Infof("[%s] Recv cancel deploy", id)
+	log.Infof("[%s] Recv query archive task", id)
 	v, ok := s.cache.Get(id)
 	if !ok {
 		return c.String(http.StatusBadRequest, TaskNotExist.String())
 	}
-	cti := v.(*CachedDeployTaskInfo)
-	cti.stopChan <- struct{}{}
-	return c.JSON(http.StatusAccepted, "")
-}
-
-// QueryTask GET /api/v1/server/deploy/:id
-func (s *Server) QueryDeploy(c echo.Context) error {
-	id := c.Param("id")
-	log.Infof("[%s] Recv query deploy", id)
-	v, ok := s.cache.Get(id)
-	if !ok {
-		return c.String(http.StatusBadRequest, TaskNotExist.String())
-	}
-	cti := v.(*CachedDeployTaskInfo)
+	cti := v.(*CachedArchiveInfo)
 	return c.JSON(http.StatusOK, cti.Query())
-}
 
-// ReportTask POST /api/v1/server/tasks/status
-func (s *Server) ReportDeployTask(c echo.Context) (err error) {
-	//  获取Body
-	csr := new(p2p.StatusReport)
-	if err = c.Bind(csr); err != nil {
-		common.LOG.Errorf("Recv [%s] request, decode body failed. %v", c.Request().URL, err)
-		return
-	}
-
-	common.LOG.Debugf("[%s] Recv deploy task report, ip=%v, percent=%v", csr.TaskID, csr.IP, csr.PercentComplete)
-	if v, ok := s.cache.Get(csr.TaskID); ok {
-		cti := v.(*CachedDeployTaskInfo)
-		cti.reportChan <- csr
-	}
-
-	return c.String(http.StatusOK, "")
 }

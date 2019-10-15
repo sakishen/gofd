@@ -17,10 +17,11 @@ type TaskSessionMgnt struct {
 
 	quitChan chan struct{} // 退出
 
-	createSessChan chan *DispatchTask      // 要创建的Task
-	startSessChan  chan *StartTask         //
-	stopSessChan   chan string             // 要关闭的Task
-	sessions       map[string]*TaskSession //
+	createSessChan chan *DispatchTask // 要创建的 Task
+	startSessChan  chan *StartTask    // 要启动的 Task
+	stopSessChan   chan string        // 要关闭的 Task
+
+	sessions map[string]*TaskSession //
 }
 
 // NewSessionMgnt ...
@@ -31,11 +32,13 @@ func NewSessionMgnt(cfg *common.Config) *TaskSessionMgnt {
 			fsProvider: OsFsProvider{},
 			cache:      NewRAMCacheProvider(cfg.Control.CacheSize),
 		},
-		quitChan:       make(chan struct{}, 1),
+		quitChan: make(chan struct{}, 1),
+
 		createSessChan: make(chan *DispatchTask, cfg.Control.MaxActive),
 		startSessChan:  make(chan *StartTask, cfg.Control.MaxActive),
 		stopSessChan:   make(chan string, 1),
-		sessions:       make(map[string]*TaskSession, 10),
+
+		sessions: make(map[string]*TaskSession, 10),
 	}
 }
 
@@ -54,7 +57,7 @@ func (sm *TaskSessionMgnt) Start() error {
 			if ts, err := NewTaskSession(sm.g, task, sm.stopSessChan); err != nil {
 				common.LOG.Error("Could not create p2p task session.", err)
 			} else {
-				common.LOG.Infof("[%s] Created p2p task session", task.TaskID)
+				common.LOG.Infof("[%s] Created p2p task session, gid=%v, version=%v", task.TaskID, task.GID, task.Version)
 				sm.sessions[ts.taskID] = ts
 				go func(s *TaskSession) {
 					s.Init()
@@ -64,7 +67,7 @@ func (sm *TaskSessionMgnt) Start() error {
 			if ts, ok := sm.sessions[task.TaskID]; ok {
 				ts.Start(task)
 			} else {
-				common.LOG.Errorf("[%s] Not find p2p task session", task.TaskID)
+				common.LOG.Errorf("[%s] Not find p2p task session,  gid=%v, version=%v", task.TaskID, task.GID, task.Version)
 			}
 		case taskID := <-sm.stopSessChan:
 			common.LOG.Infof("[%s] Stop p2p task session", taskID)

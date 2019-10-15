@@ -3,6 +3,7 @@ module github.com/xtfly/gofd
 go 1.12
 
 require (
+	github.com/go-cmd/cmd v1.0.5
 	github.com/google/pprof v0.0.0-20190908185732-236ed259b199 // indirect
 	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect

@@ -4,3 +4,5 @@
 vendor
 /**/*.tar.gz
 *.tar
+main
+download/

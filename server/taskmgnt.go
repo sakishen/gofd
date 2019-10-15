@@ -40,6 +40,9 @@ type CachedTaskInfo struct {
 	destIPs       []string
 	ti            *TaskInfo
 
+	gid     int
+	version int
+
 	succCount int
 	failCount int
 	allCount  int
@@ -57,6 +60,8 @@ func NewCachedTaskInfo(s *Server, t *CreateTask) *CachedTaskInfo {
 	return &CachedTaskInfo{
 		s:             s,
 		id:            t.ID,
+		gid:           t.Gid,
+		version:       t.Version,
 		dispatchFiles: t.DispatchFiles,
 		destIPs:       t.DestIPs,
 		ti:            newTaskInfo(t),
@@ -128,7 +133,7 @@ func (ct *CachedTaskInfo) Start() {
 			// 内容相同，如果失败了，则重新启动
 			c.out <- true
 			if ct.ti.Status == TaskFailed.String() {
-				ct.s.cache.Replace(ct.id, ct, gcache.NoExpiration)
+				_ = ct.s.cache.Replace(ct.id, ct, gcache.NoExpiration)
 				log.Infof("[%s] Task status is FAILED, will start task try again", ct.id)
 				if ts := ct.createTask(); ts != TaskInProgress {
 					ct.endTask(ts)
@@ -151,7 +156,7 @@ func (ct *CachedTaskInfo) endTask(ts TaskStatus) {
 	ct.ti.Status = ts.String()
 	ct.ti.FinishedAt = time.Now()
 	log.Infof("[%s] Task elapsed time: (%.2f seconds)", ct.id, ct.ti.FinishedAt.Sub(ct.ti.StartedAt).Seconds())
-	ct.s.cache.Replace(ct.id, ct, 5*time.Minute)
+	_ = ct.s.cache.Replace(ct.id, ct, 5*time.Minute)
 	ct.s.sessionMgnt.StopTask(ct.id)
 }
 
@@ -168,6 +173,8 @@ func (ct *CachedTaskInfo) createTask() TaskStatus {
 
 	dt := &p2p.DispatchTask{
 		TaskID:   ct.id,
+		GID:      ct.gid,
+		Version:  ct.version,
 		MetaInfo: mi,
 		Speed:    int64(ct.s.Cfg.Control.Speed * FixedBlockLen),
 	}
@@ -269,10 +276,10 @@ func (ct *CachedTaskInfo) sendReqToClients(ips []string, url string, body []byte
 
 		go func(ip string) {
 			if _, err2 := ct.s.HTTPPost(ip, url, body); err2 != nil {
-				log.Errorf("[%s] Send http request failed. POST, ip=%s, url=%s, error=%v", ct.id, ip, url, err2)
+				log.Errorf("[%s] Send http request failed. POST, gid:%v, version:%v, ip=%s, url=%s, error=%v", ct.id, ct.gid, ct.version, ip, url, err2)
 				ct.agentRspChan <- &clientRsp{IP: ip, Success: false}
 			} else {
-				log.Debugf("[%s] Send http request success. POST, ip=%s, url=%s", ct.id, ip, url)
+				log.Debugf("[%s] Send http request success. POST, gid:%v, version:%v, ip=%s, url=%s", ct.id, ct.gid, ct.version, ip, url)
 				ct.agentRspChan <- &clientRsp{IP: ip, Success: true}
 			}
 		}(ip)
@@ -286,9 +293,9 @@ func (ct *CachedTaskInfo) stopAllClientTask() {
 	for _, ip := range ct.destIPs {
 		go func(ip string) {
 			if err2 := ct.s.HTTPDelete(ip, url); err2 != nil {
-				log.Errorf("[%s] Send http request failed. DELETE, ip=%s, url=%s, error=%v", ct.id, ip, url, err2)
+				log.Errorf("[%s] Send http request failed. DELETE, gid:%v, version:%v, ip=%s, url=%s, error=%v", ct.id, ct.gid, ct.version, ip, url, err2)
 			} else {
-				log.Debugf("[%s] Send http request success. DELETE, ip=%s, url=%s", ct.id, ip, url)
+				log.Debugf("[%s] Send http request success. DELETE, gid:%v, version:%v, ip=%s, url=%s", ct.id, ct.gid, ct.version, ip, url)
 			}
 		}(ip)
 	}
@@ -299,11 +306,11 @@ func (ct *CachedTaskInfo) reportStatus(csr *p2p.StatusReport) {
 		if int(csr.PercentComplete) == 100 {
 			di.Status = TaskCompleted.String()
 			di.FinishedAt = time.Now()
-			log.Infof("[%s] Recv report task status is completed, ip=%s", ct.id, csr.IP)
+			log.Infof("[%s] Recv report task status is completed, gid:%v, version:%v, ip=%s", ct.id, ct.gid, ct.version, csr.IP)
 		} else if int(csr.PercentComplete) == -1 {
 			di.Status = TaskFailed.String()
 			di.FinishedAt = time.Now()
-			log.Infof("[%s] Recv report task status is failed, ip=%s", ct.id, csr.IP)
+			log.Infof("[%s] Recv report task status is failed, gid:%v, version:%v, ip=%s", ct.id, ct.gid, ct.version, csr.IP)
 		}
 		di.PercentComplete = csr.PercentComplete
 	}

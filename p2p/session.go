@@ -26,7 +26,7 @@ type TaskSession struct {
 	// 任务信息
 	taskID    string
 	task      *DispatchTask
-	fileStore FileStore
+	fileStore FileStore // 文件存储
 
 	// 下载过程中的Pieces信息
 	pieceSet        *Bitset // 本节点已存在Piece
@@ -58,6 +58,7 @@ type TaskSession struct {
 
 	//
 	reportor   *reporter
+	deployor   *deployer
 	reportStep int
 
 	//
@@ -85,6 +86,7 @@ func NewTaskSession(g *global, dt *DispatchTask, stopSessChan chan string) (s *T
 
 		stopSessChan: stopSessChan,
 		reportor:     newReporter(dt.TaskID, g.cfg),
+		deployor:     newDeployer(dt.TaskID, g.cfg),
 	}
 	return
 }
@@ -194,9 +196,7 @@ func (s *TaskSession) startImp(st *StartTask) {
 	s.task.LinkChain = st.LinkChain
 
 	// 找到分发路径中位置
-	net := s.g.cfg.Net
-	//common.LOG.Infof("IP:Port:%s:%v", net.IP, net.DataPort)
-	//self := fmt.Sprintf("%s:%v", net.IP, net.DataPort)
+	var net = s.g.cfg.Net //common.LOG.Infof("IP:Port:%s:%v", net.IP, net.DataPort)
 	common.LOG.Infof("IP:Port:%s:%v", net.Host, net.DataPort)
 	self := fmt.Sprintf("%s:%v", net.Host, net.DataPort)
 	addrs := s.task.LinkChain.DispatchAddrs
@@ -226,7 +226,7 @@ func (s *TaskSession) tryNewPeer() {
 		s.indexInChain = 0
 	}
 	peer := addrs[s.indexInChain]
-	s.connectToPeer(peer)
+	_ = s.connectToPeer(peer)
 }
 
 // 连接其它的Peer
@@ -235,7 +235,7 @@ func (s *TaskSession) connectToPeer(peer string) error {
 	conn, err := net.DialTimeout("tcp", peer, 1*time.Second)
 	if err != nil {
 		common.LOG.Errorf("[%s] Failed to connect to peer[%s], error=%v", s.taskID, peer, err)
-		conn.Close()
+		_ = conn.Close()
 		s.connFailCount++
 		s.retryConnTimeChan = time.After(50 * time.Microsecond)
 		return err
@@ -245,7 +245,7 @@ func (s *TaskSession) connectToPeer(peer string) error {
 	err = writePHeader(conn, s.taskID, s.g.cfg)
 	if err != nil {
 		common.LOG.Errorf("[%s] Failed to send header to peer[%s], error=%v", s.taskID, peer, err)
-		conn.Close()
+		_ = conn.Close()
 		s.indexInChain-- //连接下一个
 		s.retryConnTimeChan = time.After(50 * time.Microsecond)
 		return err
@@ -257,7 +257,7 @@ func (s *TaskSession) connectToPeer(peer string) error {
 	if err != nil {
 		// 认证通过了，但没有返回正确的响应，Peer还没创建对应Task的Session
 		common.LOG.Errorf("[%s] Failed to reading header from peer[%s], error=%v", s.taskID, peer, err)
-		conn.Close()
+		_ = conn.Close()
 		s.retryConnTimeChan = time.After(50 * time.Microsecond)
 		return err
 	}
@@ -318,7 +318,7 @@ func (s *TaskSession) closePeerAndTryReconn(peer *peer) {
 // ClosePeer 关闭Peer
 func (s *TaskSession) ClosePeer(peer *peer) {
 	peer.Close()
-	s.removeRequests(peer)
+	_ = s.removeRequests(peer)
 	delete(s.peers, peer.address)
 }
 
@@ -374,7 +374,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 		p.have.Set(int(n))
 		if !p.client {
 			for i := 0; i < maxOurRequests; i++ {
-				s.requestBlock(p) // 向请此Peer上请求发送块
+				_ = s.requestBlock(p) // 向请此Peer上请求发送块
 			}
 		}
 	case BITFIELD: // 处理Peer发送过来的BITFIELD消息
@@ -384,7 +384,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 			return errors.New("Invalid bitfield data")
 		}
 		if !p.client {
-			s.requestBlock(p) // 向Server Peer请求发送块
+			_ = s.requestBlock(p) // 向Server Peer请求发送块
 		}
 	case REQUEST: // 处理Peer发送过来的REQUEST消息
 		common.LOG.Tracef("[%s] Recv REQUEST from peer[%s] ", p.taskID, p.address)
@@ -414,7 +414,7 @@ func (s *TaskSession) generalMessage(message []byte, p *peer) (err error) {
 		}
 
 		// 存储块的信息
-		s.recordBlock(p, index, begin, uint32(length))
+		_ = s.recordBlock(p, index, begin, uint32(length))
 		err = s.requestBlock(p) // 继续向此Peer请求发送块信息
 	default:
 		return fmt.Errorf("Uknown message id: %d", messageID)
@@ -516,6 +516,8 @@ func (s *TaskSession) recordBlock(p *peer, piece, begin, length uint32) (err err
 	if s.goodPieces == s.totalPieces {
 		s.finishedAt = time.Now() // 下载完成
 		go s.reportStatus(percentComplete)
+		// TODO: 部署文件
+		go s.deploy()
 	} else {
 		// 减少上报次数，减轻Server的压力
 		if int(percentComplete) > s.reportStep {
@@ -683,6 +685,10 @@ func (s *TaskSession) shutdown() {
 		s.reportor.Close()
 	}
 
+	if s.deployor != nil {
+		s.deployor.Close()
+	}
+
 	close(s.endedChan)
 	return
 }
@@ -799,5 +805,9 @@ func (s *TaskSession) timeout() bool {
 }
 
 func (s *TaskSession) reportStatus(pecent float32) {
-	s.reportor.DoReport(s.task.LinkChain.ServerAddr, pecent)
+	s.reportor.DoReport(s.task.LinkChain.ServerAddr, s.task.GID, s.task.Version, pecent)
+}
+
+func (s *TaskSession) deploy() {
+	s.deployor.DoDeploy(s.task.LinkChain.ServerAddr, s.task.GID, s.task.Version, s.task.MetaInfo.Files)
 }

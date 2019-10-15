@@ -10,15 +10,17 @@ type FileDict struct {
 
 // MetaInfo 一个任务内所有文件的元数据信息
 type MetaInfo struct {
-	Length   int64       `json:"length"`
-	PieceLen int64       `json:"PieceLen"`
-	Pieces   []byte      `json:"pieces"`
-	Files    []*FileDict `json:"files"`
+	Length   int64       `json:"length"`   // 文件长度
+	PieceLen int64       `json:"PieceLen"` // 片长度
+	Pieces   []byte      `json:"pieces"`   // 片数据
+	Files    []*FileDict `json:"files"`    // 文件路径
 }
 
 // DispatchTask 下发给Agent的分发任务
 type DispatchTask struct {
 	TaskID    string     `json:"taskId"`
+	GID       int        `json:"gid"`
+	Version   int        `json:"version"`
 	MetaInfo  *MetaInfo  `json:"metaInfo"`
 	LinkChain *LinkChain `json:"linkChain"`
 	Speed     int64      `json:"speed"`
@@ -27,6 +29,8 @@ type DispatchTask struct {
 // StartTask 下发给Agent的分发任务
 type StartTask struct {
 	TaskID    string     `json:"taskId"`
+	GID       int        `json:"gid"`
+	Version   int        `json:"version"`
 	LinkChain *LinkChain `json:"linkChain"`
 }
 
@@ -49,7 +53,14 @@ type PHeader struct {
 
 // StatusReport Agent分发状态上报
 type StatusReport struct {
-	TaskID          string  `json:"taskId"`
-	IP              string  `json:"ip"`
+	// 任务 ID
+	TaskID string `json:"taskId"`
+	// 执行任务的机器 IP
+	IP string `json:"ip"`
+	// 游戏编号
+	GID int `json:"gid"`
+	// 游戏版本
+	Version int `json:"version"`
+	// 任务完成情况
 	PercentComplete float32 `json:"percentComplete"`
 }

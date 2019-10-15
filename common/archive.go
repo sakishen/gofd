@@ -32,11 +32,11 @@ func TarGz(srcDirPath string, destFilePath string) {
 	handleError(err)
 	if fi.IsDir() {
 		// handle source directory
-		fmt.Println("Cerating tar.gz from directory...")
+		fmt.Println("Creating tar.gz from directory...")
 		tarGzDir(srcDirPath, path.Base(srcDirPath), tw)
 	} else {
 		// handle file directly
-		fmt.Println("Cerating tar.gz from " + fi.Name() + "...")
+		fmt.Println("Creating tar.gz from " + fi.Name() + "...")
 		tarGzFile(srcDirPath, fi.Name(), tw, fi)
 	}
 	fmt.Println("TarGz done!")
@@ -47,7 +47,7 @@ func TarGz(srcDirPath string, destFilePath string) {
 // Every recurrence append the base path to the recPath
 // recPath is the path inside of tar.gz
 func tarGzDir(srcDirPath string, recPath string, tw *tar.Writer) {
-	// Open source diretory
+	// Open source directory
 	dir, err := os.Open(srcDirPath)
 	handleError(err)
 	defer dir.Close()
@@ -87,7 +87,7 @@ func tarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.FileInfo) {
 		hdr.Mode = int64(fi.Mode())
 		hdr.ModTime = fi.ModTime()
 
-		// Write hander
+		// Write handler
 		err := tw.WriteHeader(hdr)
 		handleError(err)
 	} else {
@@ -103,7 +103,7 @@ func tarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.FileInfo) {
 		hdr.Mode = int64(fi.Mode())
 		hdr.ModTime = fi.ModTime()
 
-		// Write hander
+		// Write handler
 		err = tw.WriteHeader(hdr)
 		handleError(err)
 
@@ -119,7 +119,7 @@ func UnTarGz(srcFilePath string, destDirPath string) {
 	fmt.Println("UnTarGzing " + srcFilePath + "...")
 	// Create destination directory
 	if _, err := os.Stat(destDirPath); !os.IsNotExist(err) {
-		os.Mkdir(destDirPath, os.ModePerm)
+		_ = os.Mkdir(destDirPath, os.ModePerm)
 	} else {
 		fmt.Println("dir path already exists.")
 	}
@@ -143,17 +143,17 @@ func UnTarGz(srcFilePath string, destDirPath string) {
 		//handleError(err)
 
 		fmt.Println("UnTarGzing file..." + hdr.Name)
-		// Check if it is diretory or file
+		// Check if it is directory or file
 		if hdr.Typeflag != tar.TypeDir {
 			// 获取文件信息
 			fi := hdr.FileInfo()
 			// Get files from archive
 			// Create diretory before create file
-			os.MkdirAll(destDirPath+"/"+path.Dir(fi.Name()), os.ModePerm)
+			_ = os.MkdirAll(destDirPath+"/"+path.Dir(fi.Name()), os.ModePerm)
 			// Write data to file
 			fw, _ := os.Create(destDirPath + "/" + fi.Name())
 			// 设置文件权限，这样可以保证和原始文件权限相同，如果不设置，会根据当前系统的 umask 来设置。
-			os.Chmod(destDirPath+"/"+fi.Name(), fi.Mode().Perm())
+			_ = os.Chmod(destDirPath+"/"+fi.Name(), fi.Mode().Perm())
 			_, err = io.Copy(fw, tr)
 			handleError(err)
 		}

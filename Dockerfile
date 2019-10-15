@@ -24,11 +24,12 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /opt/app .
 #COPY --from=builder /opt/config ./config
 COPY --from=builder /opt/misc ./misc
+VOLUME ["/opt/area_game_data/"]
 VOLUME ["/opt/download/"]
 VOLUME ["/opt/config/"]
 # docker build  -t vrviu/gofd:latest .
 # docker run -p 45010:45010 -p 45011:45011 -p 45000:45000 -p 45001:45001 -it --rm -v /Users/sakishum/data/saki/script/go/gofd/download/:/opt/download -v /Users/sakishum/data/saki/script/go/gofd/config:/opt/config vrviu/gofd sh
-ENTRYPOINT ["/opt/app", "-s", "/opt/config/server.yml"] 
+ENTRYPOINT ["/opt/app", "-s", "/opt/config/server.yml"]
 # docker build  -t vrviu/gofd_agent:latest .
 # docker image save -o gofd_agent_img.tar vrviu/gofd_agent
 # scp gofd_agent_img.tar user_00@10.86.0.108:~

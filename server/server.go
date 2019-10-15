@@ -40,11 +40,7 @@ func (s *Server) OnStart(c *common.Config, e *echo.Echo) error {
 	e.POST("/api/v1/server/tasks/status", s.ReportTask)
 
 	e.POST("/api/v1/server/archive", s.StartArchive)
-
-	e.POST("/api/v1/server/deploy", s.CreateDeploy)	// 创建任务
-	e.DELETE("/api/v1/server/deploy/:id", s.CancelDeploy) // 取消任务
-	e.GET("/api/v1/server/deploy/:id", s.QueryDeploy) // 获取任务执行信息
-	e.POST("/api/v1/server/deploy/status", s.ReportDeployTask) // 接收任务进度上报
+	e.GET("/api/v1/server/archive/:id", s.QueryArchiveTask)
 
 	return nil
 }

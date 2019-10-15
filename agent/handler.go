@@ -9,7 +9,7 @@ import (
 
 // CreateTask POST /api/v1/agent/tasks
 func (svc *Agent) CreateTask(c echo.Context) (err error) {
-	//  获取Body
+	//  获取 Body
 	dt := new(p2p.DispatchTask)
 	if err = c.Bind(dt); err != nil {
 		log.Errorf("Recv '%s' request, decode body failed. %v", c.Request().URL, err)
@@ -24,7 +24,7 @@ func (svc *Agent) CreateTask(c echo.Context) (err error) {
 
 // StartTask POST /api/v1/agent/tasks/start
 func (svc *Agent) StartTask(c echo.Context) (err error) {
-	//  获取Body
+	//  获取 Body
 	st := new(p2p.StartTask)
 	if err = c.Bind(st); err != nil {
 		common.LOG.Errorf("Recv '%s' request, decode body failed. %v", c.Request().URL, err)
