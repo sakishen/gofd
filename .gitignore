@@ -6,3 +6,4 @@ vendor
 *.tar
 main
 download/
+deploy_agent
