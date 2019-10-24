@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/xtfly/gofd/agent"
@@ -32,6 +33,7 @@ func init() {
 }
 
 func main() {
+	fmt.Printf("OS: %s\nArchitecture: %s\n", runtime.GOOS, runtime.GOARCH)
 	flag.Parse()
 	if !*a && !*s && *p == "" {
 		fmt.Println("miss option")

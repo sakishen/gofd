@@ -94,7 +94,6 @@ func (ct *CachedArchiveInfo) Start() {
 			return
 		case <-ct.stopChan:
 			ct.endArchive(TaskFailed)
-			//ct.stopAllClientTask()
 		case c := <-ct.cmpChan:
 			// 内容不相同
 			if c.t.ArchiveDirPath != ct.archiveDirPath || c.t.DestFilePath != ct.destFilePath {
@@ -126,6 +125,7 @@ func (ct *CachedArchiveInfo) createTask() TaskStatus {
 		fmt.Printf("Error, File/Dir not exists.")
 		return TaskFileNotExist
 	}
+
 	end := time.Now()
 	log.Infof("[%s] Start archive: (%.2f seconds)", ct.id, end.Sub(start).Seconds())
 
@@ -133,57 +133,6 @@ func (ct *CachedArchiveInfo) createTask() TaskStatus {
 	ct.succCount, ct.failCount = 1, 0
 	ct.ti.Status = TaskInProgress.String()
 	return TaskCompleted
-
-	/*mi, err := p2p.CreateFileMeta(ct.dispatchFiles, FixedBlockLen) // 块大小
-	end := time.Now()
-	if err != nil {
-		log.Errorf("[%s] Create file meta failed, error=%v", ct.id, err)
-		return TaskFileNotExist
-	}
-	log.Infof("[%s] Create metainfo: (%.2f seconds)", ct.id, end.Sub(start).Seconds())
-
-	dt := &p2p.DispatchTask{
-		TaskID:   ct.id,
-		MetaInfo: mi,
-		Speed:    int64(ct.s.Cfg.Control.Speed * FixedBlockLen),
-	}
-	dt.LinkChain = createLinkChain(ct.s.Cfg, []string{}, ct.ti) //
-
-	dtbytes, err1 := json.Marshal(dt)
-	if err1 != nil {
-		return TaskFailed
-	}
-	log.Debugf("[%s] Create dispatch task, task=%v", ct.id, string(dtbytes))
-
-	ct.allCount = len(ct.destIPs)
-	ct.succCount, ct.failCount = 0, 0
-	ct.ti.Status = TaskInProgress.String()
-	// 提交到 session 管理中运行
-	ct.s.sessionMgnt.CreateTask(dt)
-	// 给各节点发送创建分发任务的Rest消息
-	ct.sendReqToClients(ct.destIPs, "/api/v1/agent/tasks", dtbytes)
-
-	for {
-		select {
-		case tdr := <-ct.agentRspChan:
-			ct.checkAgentRsp(tdr)
-			if ct.failCount == ct.allCount {
-				return TaskFailed
-			}
-			if ct.succCount+ct.failCount == ct.allCount {
-				if ts := ct.startTask(); ts != TaskInProgress {
-					return ts
-				}
-				// 部分节点响应，则也继续
-				return TaskInProgress
-			}
-		case <-time.After(5 * time.Second): // 等超时
-			if ct.succCount == 0 {
-				common.LOG.Errorf("[%s] Wait client response timeout.", ct.id)
-				return TaskFailed
-			}
-		}
-	}*/
 }
 
 // Query ...

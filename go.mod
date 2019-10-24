@@ -1,6 +1,6 @@
 module github.com/xtfly/gofd
 
-go 1.12
+go 1.12.1
 
 require (
 	github.com/go-cmd/cmd v1.0.5

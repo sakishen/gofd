@@ -21,12 +21,15 @@ var (
 type Config struct {
 	Server bool //是否为服务端
 	Crypto *gcrypto.Crypto
-
-	Name    string `yaml:"name"`
-	DownDir string `yaml:"downdir,omitempty"` //只有客户端才配置
-	Log     string `yaml:"log"`
-
-	Net struct {
+	// 当一个field的值是empty的时候，序列化JSON时候忽略这个field
+	Name        string `yaml:"name"`
+	DownDir     string `yaml:"downdir,omitempty"` // 只有客户端才配置
+	Log         string `yaml:"log"`
+	GameDir     string `yaml:"gamedir,omitempty"`  // 游戏目录，只有客户端才配置
+	UserDateDir string `yaml:"userdata,omitempty"` // 用户数据目录，只有客户端才配置
+	UserID      int    `yaml:"userid,omitempty"`   // 文件的所有者，只有客户端才配置
+	GroupID     int    `yaml:"groupid,omitempty"`  // 所属工作组，只有客户端才配置
+	Net         struct {
 		IP       string `yaml:"ip"`
 		Host     string `yaml:"host"`
 		MgntPort int    `yaml:"mgntPort"`

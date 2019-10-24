@@ -1,5 +1,9 @@
 name: agent
 downdir: /opt/download
+gamedir: /snapshot/area_game_data
+userdata: /snapshot/area_user_data/1_1
+user: 1001
+group: 1001
 net:
     ip: 0.0.0.0
     mgntPort: 45010

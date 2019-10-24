@@ -2,18 +2,27 @@ package p2p
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"strings"
-
 	"github.com/go-cmd/cmd"
 	"github.com/xtfly/gofd/common"
+	"net/http"
+	"os"
+	"strconv"
+)
+
+const (
+	DeployEmpty = iota
+	DeployGameData
+	DeployUserData
+	DeployOtherData
+	DeployDataEnd
 )
 
 type deployInfo struct {
 	serverAddr string
+	fileType   int
 	gid        int
 	version    int
+	storageDir string
 	Files      []*FileDict
 }
 
@@ -44,8 +53,8 @@ func (r *deployer) run() {
 }
 
 // DoDeploy 分发完毕后会调用此函数用于加压归档数据
-func (r *deployer) DoDeploy(serverAddr string, gid int, version int, files []*FileDict) {
-	r.deployChan <- &deployInfo{serverAddr: serverAddr, gid: gid, version: version, Files: files}
+func (r *deployer) DoDeploy(serverAddr string, gid int, version int, fileType int, storageDir string, files []*FileDict) {
+	r.deployChan <- &deployInfo{serverAddr: serverAddr, gid: gid, version: version, fileType: fileType, storageDir: storageDir, Files: files}
 }
 
 func (r *deployer) Close() {
@@ -53,6 +62,32 @@ func (r *deployer) Close() {
 }
 
 func (r *deployer) deployImp(ri *deployInfo) {
+	if ri.fileType > DeployDataEnd {
+		common.LOG.Error("deploy file type illegal")
+		return
+	}
+
+	common.LOG.Errorf("[%s] Deploy Done, fileType:%v, gid=%v, version=%v, storageDir:%v.", ri.fileType, r.taskID, ri.gid, ri.version, ri.storageDir)
+	// TODO: 增加解压及创建目录的方法
+	// 1. 检查指定目录是否存在，存在就判断是否是 subvolume, 不存在就创建 （stat -f --format=%T /path）
+	// 2. 解压归档文件到指定目录
+
+	// 根据任务文件类型设置解压路径
+	switch ri.fileType {
+	case DeployGameData:
+		common.LOG.Error("Deploy Game data")
+		path := fmt.Sprintf("%s/%v_%v", r.cfg.GameDir, ri.gid, ri.version)
+		target := fmt.Sprintf("%s/%v_%v.tar.gz", r.cfg.DownDir, ri.gid, ri.version)
+		r.decompression(target, path)
+	case DeployUserData:
+		common.LOG.Error("Deploy User data")
+		path := fmt.Sprintf("%s/%s", r.cfg.UserDateDir, ri.storageDir)
+		target := fmt.Sprintf("%s/%v_%v_user.tar.gz", r.cfg.DownDir, ri.gid, ri.version)
+		r.decompression(target, path)
+	case DeployOtherData:
+		common.LOG.Error("Deploy Other data")
+	}
+
 	/*csr := &StatusReport{
 		TaskID: r.taskID,
 		IP:     r.cfg.Net.Host, // 上报进度使用
@@ -69,53 +104,61 @@ func (r *deployer) deployImp(ri *deployInfo) {
 	if err != nil {
 		common.LOG.Errorf("[%s] Report session status failed. error=%v", r.taskID, err)
 	}*/
-	common.LOG.Errorf("[%s] Deploy Done, gid=%v, version=%v.", r.taskID, ri.gid, ri.version)
-	// TODO: 增加解压及创建目录的方法
-	// 1. 检查指定目录是否存在，存在就判断是否是 subvolume, 不存在就创建 （stat -f --format=%T /path）
-	// 2. 解压归档文件到指定目录
-
-	path := fmt.Sprintf("/opt/area_game_data/%v_%v", ri.gid, ri.version)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		common.LOG.Errorf("[%s] %v_%v not exists.", r.taskID, ri.gid, ri.version)
-	} else {
-		// 判断是否 btrfs subvolume
-		if path_type, err := r.isBtrfsSubvolum(path); err != nil {
-			common.LOG.Error("error:", err)
-		} else {
-			common.LOG.Error("path_type:", path_type)
-			common.LOG.Error(strings.Compare(path_type, "\"btrfs\""))
-		}
-	}
 
 	return
 }
 
-// isBtrfsSubvolum call change model command
-func (r *deployer) isBtrfsSubvolum(path string) (string, error) {
-	common.LOG.Error("Stat File:", path)
-	result := ""
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		// path/to/whatever exists
-		createCmd := cmd.NewCmd("stat", "-f", "--format=\"%T\"", path)
-		stateChan := createCmd.Start()
-		finalStatus := <-stateChan
-		if finalStatus.Error != nil {
-			common.LOG.Error(finalStatus.Error)
-			return "", finalStatus.Error
+func (r *deployer) decompression(target, path string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		if err := r.createBtrfsSubvolum(path); err != nil {
+			common.LOG.Errorf("[%s] btrfs subvolume create dir failed, err: %v", r.taskID, err)
 		}
 
-		n := len(finalStatus.Stdout)
-		common.LOG.Error("n:", n)
-		if n > 1 {
-			result = strings.TrimRight(finalStatus.Stdout[n-1], "\n")
-		} else {
-			result = strings.TrimRight(finalStatus.Stdout[0], "\n")
+		if err := r.ChownUserGroupDir(path, r.cfg.UserID, r.cfg.GroupID); err != nil {
+			common.LOG.Errorf("[%s] chown %v:%v failed, err: %v", r.taskID, r.cfg.UserID, r.cfg.GroupID, err)
 		}
-
-	} else {
-		return "", err
 	}
 
-	return result, nil
+	// 解压数据, 并同意设置文件所属用户及所属工作组
+	if err := common.UnTarGz(target, path, r.cfg.UserID, r.cfg.GroupID); err != nil {
+		common.LOG.Error("UnTarGz fail")
+	}
+}
+
+func (r *deployer) createBtrfsSubvolum(path string) error {
+	common.LOG.Error("btrfs subvolume create:", path)
+	createCmd := cmd.NewCmd("btrfs", "subvolume", "create", path)
+	stateChan := createCmd.Start()
+	finalStatus := <-stateChan
+	if finalStatus.Error != nil {
+		common.LOG.Error(finalStatus.Error)
+		return finalStatus.Error
+	}
+
+	for _, info := range finalStatus.Stdout {
+		common.LOG.Error(info)
+	}
+
+	return nil
+}
+
+// ChownUserGroupDir call change owner command
+func (r *deployer) ChownUserGroupDir(path string, user int, group int) error {
+	// chown -R owner:group path
+	common.LOG.Debug("chownUserGroupDir user:", user, ", group:", group, ", path:", path)
+	chownCmd := cmd.NewCmd("chown", "-R", strconv.Itoa(user)+":"+strconv.Itoa(group), path)
+	stateChan := chownCmd.Start()
+	finalStatus := <-stateChan
+
+	if finalStatus.Error != nil {
+		common.LOG.Error(finalStatus.Error)
+		return finalStatus.Error
+	}
+
+	for _, info := range finalStatus.Stdout {
+		common.LOG.Error(info)
+	}
+
+	return nil
 }

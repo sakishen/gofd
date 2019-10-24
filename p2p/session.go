@@ -805,9 +805,9 @@ func (s *TaskSession) timeout() bool {
 }
 
 func (s *TaskSession) reportStatus(pecent float32) {
-	s.reportor.DoReport(s.task.LinkChain.ServerAddr, s.task.GID, s.task.Version, pecent)
+	s.reportor.DoReport(s.task.LinkChain.ServerAddr, s.task.FileType, s.task.GID, s.task.Version, s.task.StorageDir, pecent)
 }
 
 func (s *TaskSession) deploy() {
-	s.deployor.DoDeploy(s.task.LinkChain.ServerAddr, s.task.GID, s.task.Version, s.task.MetaInfo.Files)
+	s.deployor.DoDeploy(s.task.LinkChain.ServerAddr, s.task.GID, s.task.Version, s.task.FileType, s.task.StorageDir, s.task.MetaInfo.Files)
 }

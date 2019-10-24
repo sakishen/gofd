@@ -15,24 +15,28 @@ ADD . .
 # -s: 省略符号表和调试信息
 # -w: 省略DWARF符号表
 RUN GOOS=linux CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o app cmd/main.go
-RUN rm /etc/localtime && ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-
+#RUN rm /etc/localtime && ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates bash && mkdir -p /opt/download && mkdir -p /opt/config
+RUN apk --no-cache add ca-certificates bash tzdata && mkdir -p /opt/download && mkdir -p /opt/config
+ENV TZ Asia/Shanghai
 WORKDIR /opt/
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /opt/app .
 #COPY --from=builder /opt/config ./config
 COPY --from=builder /opt/misc ./misc
 VOLUME ["/opt/area_game_data/"]
+VOLUME ["/opt/area_user_data/"]
 VOLUME ["/opt/download/"]
 VOLUME ["/opt/config/"]
+VOLUME ["/opt/log/"]
+EXPOSE 45010 45011 45000 45001
 # docker build  -t vrviu/gofd:latest .
 # docker run -p 45010:45010 -p 45011:45011 -p 45000:45000 -p 45001:45001 -it --rm -v /Users/sakishum/data/saki/script/go/gofd/download/:/opt/download -v /Users/sakishum/data/saki/script/go/gofd/config:/opt/config vrviu/gofd sh
 ENTRYPOINT ["/opt/app", "-s", "/opt/config/server.yml"]
+#HEALTHCHECK --interval=5m --timeout=3s CMD curl -f https://localhost:45010/ || exit 1
 # docker build  -t vrviu/gofd_agent:latest .
 # docker image save -o gofd_agent_img.tar vrviu/gofd_agent
 # scp gofd_agent_img.tar user_00@10.86.0.108:~
+
 # docker image load -i gofd_agent_img.tar
 # docker run -p 45010:45010 -p 45011:45011 -it --rm -v /data/saki/download/:/opt/download -v /data/saki/conf/:/opt/config vrviu/gofd_agent sh
 #ENTRYPOINT ["/opt/app", "-a", "/opt/config/agent.yml"]

@@ -60,8 +60,7 @@ func tarGzDir(srcDirPath string, recPath string, tw *tar.Writer) {
 		curPath := srcDirPath + "/" + fi.Name()
 		// Check it is directory or file
 		if fi.IsDir() {
-			// Directory
-			// (Directory won't add unitl all subfiles are added)
+			// Directory (Directory won't add until all sub files are added)
 			fmt.Printf("Adding path...%s\n", curPath)
 			tarGzDir(curPath, recPath+"/"+fi.Name(), tw)
 		} else {
@@ -79,13 +78,15 @@ func tarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.FileInfo) {
 		// Create tar header
 		hdr := new(tar.Header)
 		// if last character of header name is '/' it also can be directory
-		// but if you don't set Typeflag, error will occur when you untargz
+		// but if you don't set Type_flag, error will occur when you decompression
 		hdr.Name = recPath + "/"
 		hdr.Typeflag = tar.TypeDir
 		hdr.Size = 0
 		//hdr.Mode = 0755 | c_ISDIR
 		hdr.Mode = int64(fi.Mode())
 		hdr.ModTime = fi.ModTime()
+		//Uid   int    // User ID of owner
+		//Gid   int    // Group ID of owner
 
 		// Write handler
 		err := tw.WriteHeader(hdr)
@@ -115,7 +116,7 @@ func tarGzFile(srcFile string, recPath string, tw *tar.Writer, fi os.FileInfo) {
 
 // UnTarGz and untar from source file to destination directory
 // you need check file exist before you call this function
-func UnTarGz(srcFilePath string, destDirPath string) {
+func UnTarGz(srcFilePath string, destDirPath string, uid int, gid int) error {
 	fmt.Println("UnTarGzing " + srcFilePath + "...")
 	// Create destination directory
 	if _, err := os.Stat(destDirPath); !os.IsNotExist(err) {
@@ -130,35 +131,73 @@ func UnTarGz(srcFilePath string, destDirPath string) {
 
 	// Gzip reader
 	gr, err := gzip.NewReader(fr)
+	handleError(err)
+	defer gr.Close()
 
 	// Tar reader
 	tr := tar.NewReader(gr)
 
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// End of tar archive
-			break
+	for hdr, er := tr.Next(); er != io.EOF; hdr, er = tr.Next() {
+		if er != nil {
+			handleError(er)
 		}
-		//handleError(err)
 
-		fmt.Println("UnTarGzing file..." + hdr.Name)
-		// Check if it is directory or file
-		if hdr.Typeflag != tar.TypeDir {
-			// 获取文件信息
-			fi := hdr.FileInfo()
-			// Get files from archive
-			// Create diretory before create file
-			_ = os.MkdirAll(destDirPath+"/"+path.Dir(fi.Name()), os.ModePerm)
-			// Write data to file
-			fw, _ := os.Create(destDirPath + "/" + fi.Name())
-			// 设置文件权限，这样可以保证和原始文件权限相同，如果不设置，会根据当前系统的 umask 来设置。
-			_ = os.Chmod(destDirPath+"/"+fi.Name(), fi.Mode().Perm())
-			_, err = io.Copy(fw, tr)
-			handleError(err)
+		// 获取文件信息
+		fi := hdr.FileInfo()
+
+		// 获取绝对路径
+		dstFullPath := destDirPath + "/" + hdr.Name
+
+		// 判断是否为文件夹或文件
+		if hdr.Typeflag == tar.TypeDir {
+			if err := os.MkdirAll(dstFullPath, fi.Mode().Perm()); err != nil {
+				handleError(err)
+			}
+			// 设置目录权限
+			if err := os.Chmod(dstFullPath, fi.Mode().Perm()); err != nil {
+				handleError(err)
+			}
+			// 设置目录权限
+			if err := os.Chown(dstFullPath, uid, gid); err != nil {
+				handleError(err)
+			}
+		} else {
+			// 创建文件所在的目录
+			_ = os.MkdirAll(path.Dir(dstFullPath), os.ModePerm)
+			// 将 tr 中的数据写入文件中
+			if er := unTarFile(dstFullPath, tr); er != nil {
+				return er
+			}
+			// 设置文件权限
+			if err := os.Chmod(dstFullPath, fi.Mode().Perm()); err != nil {
+				handleError(err)
+			}
+			// 设置目录权限
+			if err := os.Chown(dstFullPath, uid, gid); err != nil {
+				handleError(err)
+			}
 		}
 	}
-	fmt.Println("UnTarGz done!")
+	log.Println("UnTarGz done!")
+	return nil
+}
+
+// 因为要在 defer 中关闭文件，所以要单独创建一个函数
+func unTarFile(dstFile string, tr *tar.Reader) error {
+	// 创建空文件，准备写入解包后的数据
+	fw, er := os.Create(dstFile)
+	if er != nil {
+		return er
+	}
+	defer fw.Close()
+
+	// 写入解包后的数据, 当目标文件内容和原文件不符之时 目标文件会被原文件覆盖。
+	_, er = io.Copy(fw, tr)
+	if er != nil {
+		return er
+	}
+
+	return nil
 }
 
 func handleError(err error) {

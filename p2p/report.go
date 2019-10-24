@@ -9,8 +9,10 @@ import (
 
 type reportInfo struct {
 	serverAddr      string
+	fileType        int
 	gid             int
 	version         int
+	storageDir      string
 	percentComplete float32
 }
 
@@ -40,8 +42,8 @@ func (r *reporter) run() {
 	}
 }
 
-func (r *reporter) DoReport(serverAddr string, gid int, version int, pecent float32) {
-	r.reportChan <- &reportInfo{serverAddr: serverAddr, gid: gid, version: version, percentComplete: pecent}
+func (r *reporter) DoReport(serverAddr string, fileType int, gid int, version int, storageDir string, pecent float32) {
+	r.reportChan <- &reportInfo{serverAddr: serverAddr, fileType: fileType, gid: gid, version: version, storageDir: storageDir, percentComplete: pecent}
 }
 
 func (r *reporter) Close() {
@@ -58,6 +60,7 @@ func (r *reporter) reportImp(ri *reportInfo) {
 		IP:              r.cfg.Net.Host, // 上报进度使用
 		GID:             ri.gid,         // 上报游戏 ID
 		Version:         ri.version,     // 上报游戏版本
+		StorageDir:      ri.storageDir,  //存储路径
 		PercentComplete: ri.percentComplete,
 	}
 	bs, err := json.Marshal(csr)

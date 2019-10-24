@@ -18,20 +18,24 @@ type MetaInfo struct {
 
 // DispatchTask 下发给Agent的分发任务
 type DispatchTask struct {
-	TaskID    string     `json:"taskId"`
-	GID       int        `json:"gid"`
-	Version   int        `json:"version"`
-	MetaInfo  *MetaInfo  `json:"metaInfo"`
-	LinkChain *LinkChain `json:"linkChain"`
-	Speed     int64      `json:"speed"`
+	TaskID     string     `json:"taskId"`
+	FileType   int        `json:"fileType"`
+	GID        int        `json:"gid"`
+	Version    int        `json:"version"`
+	StorageDir string     `json:"storage_dir"`
+	MetaInfo   *MetaInfo  `json:"metaInfo"`
+	LinkChain  *LinkChain `json:"linkChain"`
+	Speed      int64      `json:"speed"`
 }
 
 // StartTask 下发给Agent的分发任务
 type StartTask struct {
-	TaskID    string     `json:"taskId"`
-	GID       int        `json:"gid"`
-	Version   int        `json:"version"`
-	LinkChain *LinkChain `json:"linkChain"`
+	TaskID     string     `json:"taskId"`
+	FileType   int        `json:"fileType"`
+	GID        int        `json:"gid"`
+	Version    int        `json:"version"`
+	StorageDir string     `json:"storage_dir"`
+	LinkChain  *LinkChain `json:"linkChain"`
 }
 
 // LinkChain 分发路径
@@ -57,10 +61,14 @@ type StatusReport struct {
 	TaskID string `json:"taskId"`
 	// 执行任务的机器 IP
 	IP string `json:"ip"`
+	// 文件类型
+	FileType int `json:"fileType"`
 	// 游戏编号
 	GID int `json:"gid"`
 	// 游戏版本
 	Version int `json:"version"`
+	// 用户数据存储路径
+	StorageDir string `json:"storage_dir"`
 	// 任务完成情况
 	PercentComplete float32 `json:"percentComplete"`
 }

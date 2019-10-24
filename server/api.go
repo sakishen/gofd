@@ -6,8 +6,10 @@ import "time"
 // CreateTask 创建分发任务
 type CreateTask struct {
 	ID            string   `json:"id"`
+	FileType      int      `json:"fileType"`
 	Gid           int      `json:"gid"`
 	Version       int      `json:"version"`
+	StorageDir    string   `json:"storage_dir"`
 	DispatchFiles []string `json:"dispatchFiles"`
 	DestIPs       []string `json:"destIPs"`
 }
@@ -15,8 +17,10 @@ type CreateTask struct {
 // StartArchive 创建归档任务
 type StartArchive struct {
 	ID             string `json:"id"`
+	FileType       int    `json:"fileType"`
 	Gid            int    `json:"gid"`
 	Version        int    `json:"version"`
+	StorageDir     string `json:"storage_dir"`
 	ArchiveDirPath string `json:"archiveDirPath"`
 	DestFilePath   string `json:"destFilePath"`
 }

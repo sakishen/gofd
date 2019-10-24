@@ -57,7 +57,7 @@ func (sm *TaskSessionMgnt) Start() error {
 			if ts, err := NewTaskSession(sm.g, task, sm.stopSessChan); err != nil {
 				common.LOG.Error("Could not create p2p task session.", err)
 			} else {
-				common.LOG.Infof("[%s] Created p2p task session, gid=%v, version=%v", task.TaskID, task.GID, task.Version)
+				common.LOG.Infof("[%s] Created p2p task session, fileType=%v, gid=%v, version=%v, storage_dir=%v", task.TaskID, task.FileType, task.GID, task.Version, task.StorageDir)
 				sm.sessions[ts.taskID] = ts
 				go func(s *TaskSession) {
 					s.Init()
@@ -67,7 +67,7 @@ func (sm *TaskSessionMgnt) Start() error {
 			if ts, ok := sm.sessions[task.TaskID]; ok {
 				ts.Start(task)
 			} else {
-				common.LOG.Errorf("[%s] Not find p2p task session,  gid=%v, version=%v", task.TaskID, task.GID, task.Version)
+				common.LOG.Errorf("[%s] Not find p2p task session, fileType=%v, gid=%v, version=%v, storage_dir=%v", task.TaskID, task.FileType, task.GID, task.Version, task.StorageDir)
 			}
 		case taskID := <-sm.stopSessChan:
 			common.LOG.Infof("[%s] Stop p2p task session", taskID)

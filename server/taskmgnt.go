@@ -40,8 +40,10 @@ type CachedTaskInfo struct {
 	destIPs       []string
 	ti            *TaskInfo
 
-	gid     int
-	version int
+	fileType   int
+	gid        int
+	version    int
+	storageDir string
 
 	succCount int
 	failCount int
@@ -60,8 +62,10 @@ func NewCachedTaskInfo(s *Server, t *CreateTask) *CachedTaskInfo {
 	return &CachedTaskInfo{
 		s:             s,
 		id:            t.ID,
+		fileType:      t.FileType,
 		gid:           t.Gid,
 		version:       t.Version,
+		storageDir:    t.StorageDir,
 		dispatchFiles: t.DispatchFiles,
 		destIPs:       t.DestIPs,
 		ti:            newTaskInfo(t),
@@ -172,11 +176,13 @@ func (ct *CachedTaskInfo) createTask() TaskStatus {
 	log.Infof("[%s] Create metainfo: (%.2f seconds)", ct.id, end.Sub(start).Seconds())
 
 	dt := &p2p.DispatchTask{
-		TaskID:   ct.id,
-		GID:      ct.gid,
-		Version:  ct.version,
-		MetaInfo: mi,
-		Speed:    int64(ct.s.Cfg.Control.Speed * FixedBlockLen),
+		TaskID:     ct.id,
+		FileType:   ct.fileType,
+		GID:        ct.gid,
+		Version:    ct.version,
+		StorageDir: ct.storageDir,
+		MetaInfo:   mi,
+		Speed:      int64(ct.s.Cfg.Control.Speed * FixedBlockLen),
 	}
 	dt.LinkChain = createLinkChain(ct.s.Cfg, []string{}, ct.ti) //
 

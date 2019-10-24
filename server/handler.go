@@ -31,7 +31,7 @@ func (s *Server) CreateTask(c echo.Context) (err error) {
 		return c.String(http.StatusBadRequest, TaskExist.String())
 	}
 
-	common.LOG.Infof("[%s] Recv task, file=%v, ips=%v, gid=%v, version=%v", t.ID, t.DispatchFiles, t.DestIPs, t.Gid, t.Version)
+	common.LOG.Infof("[%s] Recv task, file=%v, ips=%v, fileType=%v, gid=%v, version=%v, storage_dir=%v", t.ID, t.DispatchFiles, t.DestIPs, t.FileType, t.Gid, t.Version, t.StorageDir)
 
 	cti := NewCachedTaskInfo(s, t)
 	s.cache.Set(t.ID, cti, gcache.NoExpiration)
@@ -80,7 +80,7 @@ func (s *Server) ReportTask(c echo.Context) (err error) {
 		return
 	}
 
-	common.LOG.Debugf("[%s] Recv task report, ip=%v, gid=%v, version=%v, percent=%v", csr.TaskID, csr.IP, csr.GID, csr.Version, csr.PercentComplete)
+	common.LOG.Debugf("[%s] Recv task report, ip=%v, fileType=%v, gid=%v, version=%v, percent=%v", csr.TaskID, csr.IP, csr.FileType, csr.GID, csr.Version, csr.PercentComplete)
 	if v, ok := s.cache.Get(csr.TaskID); ok {
 		cti := v.(*CachedTaskInfo)
 		cti.reportChan <- csr
